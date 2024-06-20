@@ -3,7 +3,8 @@ import { Server } from 'socket.io';
 import { pool } from './config/db';
 import { RowDataPacket } from 'mysql2';
 import { getUser } from './controllers/userController';
-import { addMenu } from './controllers/adminController';
+import { addMenu, deleteItem,updateItem } from './controllers/adminController';
+import sequelize from './config/database';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -60,11 +61,61 @@ io.on('connection', (socket) => {
 
   })
 
+  socket.on("deleteMenuItem", async ({ id}) => {
+
+    
+    try {
+      const menuItem = await deleteItem(id)
+      if (menuItem) {
+        socket.emit("itemDeleted", menuItem)
+      }
+      else {
+        socket.emit("error", "Invalid Id")
+      }
+      console.log("Deleted item = ", menuItem)
+
+
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      socket.emit("error", "Invalid details")
+    }
+
+  })
+  socket.on("updateMenu", async ({ id, name, category, price, availability}) => {
+
+    console.log("Update menu");
+    try {
+      const menuItem = await updateItem(id, name, category, price, availability)
+      if (menuItem) {
+        socket.emit("itemUpdated", menuItem)
+      }
+      else {
+        socket.emit("error", "Invalid Id")
+      }
+      console.log("Updated item = ", menuItem)
+
+
+    } catch (error) {
+      console.error('Error updating item:', error);
+      socket.emit("error", "Invalid details")
+    }
+
+  })
+
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
 });
 
+sequelize.sync()
+    .then(() => {
+        console.log("Database connected");
+    })
+    .catch((error) => {
+        console.log(error);
+    });
+
 httpServer.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });
+

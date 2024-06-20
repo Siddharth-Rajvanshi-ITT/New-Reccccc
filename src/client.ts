@@ -67,16 +67,16 @@ const adminFunction = async (user: any) => {
       Enter action number: `);
 
     switch (action.trim()) {
-      case '1': // Add Menu
+      case '1': 
         await addMenu();
         break;
-      case '2': // Delete Menu
+      case '2': 
         await deleteMenu();
         break;
-      case '3': // Update Menu
+      case '3': 
         await updateMenu();
         break;
-      case '4': // Exit
+      case '4':
         console.log('Exiting Admin Panel');
         return;
       default:
@@ -104,16 +104,18 @@ const addMenu = async () => {
 const deleteMenu = async () => {
   const menuId = await askQuestion('Enter Menu ID to delete: ');
 
-  socket.emit('deleteMenu', { id: parseInt(menuId) });
+  socket.emit('deleteMenuItem', { id: parseInt(menuId) });
 };
 
 // Function to update an existing menu
 const updateMenu = async () => {
   const menuId = await askQuestion('Enter Menu ID to update: ');
-  const menuName = await askQuestion('Enter Updated Menu Name: ');
-  const menuType = await askQuestion('Enter Updated Menu Type: ');
+  const name = await askQuestion('Enter new name:)');
+  const category = await askQuestion('Enter new category:)');
+  const price = await askQuestion('Enter new price:)');
+  const availability = await askQuestion('Enter new availability:)');
 
-  socket.emit('updateMenu', { id: parseInt(menuId), name: menuName, type: menuType });
+  socket.emit('updateMenu', { id: parseInt(menuId), name, category, price, availability});
 };
 
 // Event listeners for server responses and socket events
