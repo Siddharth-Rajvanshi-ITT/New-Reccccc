@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+      "target": "es6",
+      "module": "commonjs",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true
+    },
+    "include": [
+      "src/**/*" // Recursively includes all .ts files in the src directory
+    ],
+    "exclude": [
+      "node_modules",
+      "**/*.spec.ts" // Optionally exclude test files
+    ]
+  }
+  
