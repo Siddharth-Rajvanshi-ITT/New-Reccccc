@@ -15,4 +15,20 @@ export const getUserByIdAndPassword = async(id:string,password:string) => {
       else
         return null
 }
+export const getMenuItems = async() => {
+  const [rows] = await pool.query<RowDataPacket[]>("SELECT * FROM menu_items");
 
+  console.log(rows)
+    // Iterate over the rows
+    const user = {
+      item_id: rows[0].item_id,
+      name:rows[0].name,
+      category:rows[0].category,
+      price:rows[0].price,
+      availability_status:rows[0].availability_status
+    }
+    if(user)
+      return user
+    else
+      return null
+}

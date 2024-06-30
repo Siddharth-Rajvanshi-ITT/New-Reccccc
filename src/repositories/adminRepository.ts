@@ -39,3 +39,12 @@ export const updatedItemData = async (id: number, name: string, category: string
     throw new Error(error.message);
   }
 }
+
+export const viewMenuItems = async () => {
+  try {
+    const menuItems = await MenuItem.findAll();
+    return menuItems;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};

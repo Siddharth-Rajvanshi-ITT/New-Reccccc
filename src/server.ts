@@ -3,8 +3,10 @@ import { Server } from 'socket.io';
 import { pool } from './config/db';
 import { RowDataPacket } from 'mysql2';
 import { getUser } from './controllers/userController';
-import { addMenu, deleteItem,updateItem } from './controllers/adminController';
+import { addMenu, deleteItem,updateItem, viewItem } from './controllers/adminController';
+import chefController from './controllers/chefController'
 import sequelize from './config/database';
+import { viewMenuItems } from './repositories/adminRepository';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -36,6 +38,28 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error fetching users:', error);
       socket.emit("error", "Invalid Credentials")
+    }
+
+  })
+
+  socket.on("viewMenu", async () => {
+
+    console.log("viewing item")
+    try {
+      const menuItem = await viewItem()
+
+      console.log("After try view")
+      if (menuItem) {
+        socket.emit("menuItemSuccess", menuItem)
+      }
+      else {
+        socket.emit("error")
+      }
+
+
+    } catch (error) {
+      console.error('Error viewing item:', error);
+      socket.emit("error")
     }
 
   })
@@ -102,6 +126,16 @@ io.on('connection', (socket) => {
 
   })
 
+  socket.on('addRolloutItem', async ({rolloutItemId}) =>{
+      await chefController.addToRolloutMenu(rolloutItemId)
+  })
+
+  socket.on('getRolloutItems', async () =>{
+    let items = await chefController.viewRolloutItems()
+
+    socket.emit('getRolloutItemsSuccess', items)
+  })
+
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
@@ -114,7 +148,6 @@ sequelize.sync()
     .catch((error) => {
         console.log(error);
     });
-
 httpServer.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });

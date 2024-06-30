@@ -1,5 +1,7 @@
 import readline from 'readline';
 import { io } from 'socket.io-client';
+import { addToRolloutMenu } from './controllers/chefController';
+import { getRolloutItmes } from './repositories/chefRepository';
 
 const socket = io('http://localhost:3000');
 
@@ -9,7 +11,7 @@ const rl = readline.createInterface({
 });
 
 
-const askQuestion = (query:string):Promise<string> => {
+const askQuestion = (query: string): Promise<string> => {
   return new Promise(resolve => rl.question(query, resolve));
 };
 
@@ -18,29 +20,31 @@ socket.on('connect', async () => {
   const employeeID = await askQuestion('Enter employee ID: ');
   const password = await askQuestion('Enter password: ');
   socket.emit("login",{id:parseInt(employeeID),password})
-});
+  
+})
 
-socket.on("login",(user)=>{
+socket.on("login", (user) => {
   console.log("Login Successfull")
   console.log(`Welcome ${user.name} to our system`);
   console.log(`Welcome ${user.role} to our system`);
 
-  switch (user.role){
-    // case "employee":
-    //   employeeFunction(user);
-    //   break;
+  switch (user.role) {
+    case "employee":
+      employeeFunction(user);
+      break;
     case "admin":
       adminFunction(user)
       break;
-    
+    case 'chef':
+      chefFunction(user)
+      break;
+
   }
 
 })
 
 
-
-
-socket.on("error",(msg)=>{
+socket.on("error", (msg) => {
   console.log(msg)
 })
 socket.on('message', (msg) => {
@@ -51,6 +55,58 @@ socket.on('disconnect', () => {
   console.log('Disconnected from server');
 });
 
+const employeeFunction = async (user: any) => {
+  console.log(`Welcome ${user.name}!`);
+
+  // Loop to continue asking for admin actions until explicitly exiting
+  while (true) {
+    const action = await askQuestion(`
+      Choose an action:
+      1. View Menu
+      Enter action number: `);
+
+    switch (action.trim()) {
+      case '1':
+        console.log("entering view menu")
+        await viewMenu();
+        break;
+
+      default:
+        console.log('Invalid option');
+    }
+  }
+};
+
+
+const chefFunction = async (user: any) => {
+  console.log(`Welcome chef ${user.name}!`);
+
+  // Loop to continue asking for admin actions until explicitly exiting
+  while (true) {
+    const action = await askQuestion(`
+      Choose an action:
+      1. View Menu
+      2. add rollout item
+      3. view rollout item
+      Enter action number: `);
+
+    switch (action.trim()) {
+      case '1':
+        console.log("entering view menu")
+        await viewMenu();
+        break;
+      case '2':
+        let rollout_item = await askQuestion("Enter id To add to rollout: ")
+        socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
+        break;
+      case '3':
+        socket.emit('getRolloutItems')
+        break;
+      default:
+        console.log('Invalid option');
+    }
+  }
+};
 
 
 const adminFunction = async (user: any) => {
@@ -63,20 +119,24 @@ const adminFunction = async (user: any) => {
       1. Add Menu
       2. Delete Menu
       3. Update Menu
-      4. Exit
+      4. View Menu
+      5. Exit
       Enter action number: `);
 
     switch (action.trim()) {
-      case '1': 
+      case '1':
         await addMenu();
         break;
-      case '2': 
+      case '2':         
         await deleteMenu();
         break;
-      case '3': 
+      case '3':
         await updateMenu();
         break;
       case '4':
+        await viewMenu();
+        return;
+      case '5':
         console.log('Exiting Admin Panel');
         return;
       default:
@@ -93,11 +153,12 @@ const addMenu = async () => {
   const itemPrice = await askQuestion('Enter Menu Price : ');
   const itemAvailability = await askQuestion('Enter Menu Availability Status: ');
 
-  console.log("Item:", { id:itemID , name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability })
+  console.log("Item:", { id: itemID, name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability })
 
-  socket.emit('addMenu', { id:itemID , name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability })
-  
+  socket.emit('addMenu', { id: itemID, name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability })
+
   console.log("Item added after emit");
+
 };
 
 // Function to delete an existing menu
@@ -115,17 +176,23 @@ const updateMenu = async () => {
   const price = await askQuestion('Enter new price:)');
   const availability = await askQuestion('Enter new availability:)');
 
-  socket.emit('updateMenu', { id: parseInt(menuId), name, category, price, availability});
+  socket.emit('updateMenu', { id: parseInt(menuId), name, category, price, availability });
 };
 
-// Event listeners for server responses and socket events
-socket.on('connect', async () => {
-  console.log('Connected to server');
-  const employeeID = await askQuestion('Enter employee ID: ');
-  const password = await askQuestion('Enter password: ');
-  socket.emit("login", { id: parseInt(employeeID), password });
-});
+const viewMenu = async () => {
+  socket.emit("viewMenu");
+};
 
-socket.on("itemAdded",(menuItem)=>{
+
+socket.on("itemAdded", (menuItem) => {
   console.log("Item added", menuItem)
+})
+
+
+socket.on("getRolloutItemsSuccess", (menuItem) => {
+  console.table(menuItem)
+})
+
+socket.on("menuItemSuccess", (menuItem) => {
+  console.table(menuItem)
 })
