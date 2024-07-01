@@ -96,8 +96,7 @@ const chefFunction = async (user: any) => {
         await viewMenu();
         break;
       case '2':
-        let rollout_item = await askQuestion("Enter id To add to rollout: ")
-        socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
+        await rolloutItems()
         break;
       case '3':
         socket.emit('getRolloutItems')
@@ -107,6 +106,14 @@ const chefFunction = async (user: any) => {
     }
   }
 };
+
+const rolloutItems = async () =>{
+  
+  socket.emit('getRecommendedItems')
+  
+  // let rollout_item = await askQuestion("Enter id To add to rollout: ")
+  // socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
+}
 
 
 const adminFunction = async (user: any) => {
@@ -196,3 +203,9 @@ socket.on("getRolloutItemsSuccess", (menuItem) => {
 socket.on("menuItemSuccess", (menuItem) => {
   console.table(menuItem)
 })
+
+socket.on('getRecommendedItemsSuccess',  (menuItems: any)=>{
+  console.table(menuItems)
+
+})
+

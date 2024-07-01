@@ -1,4 +1,1 @@
-case "admin":
-      adminFunction(user)
-      break;
-    
+menuItemSuccess

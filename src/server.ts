@@ -7,6 +7,7 @@ import { addMenu, deleteItem,updateItem, viewItem } from './controllers/adminCon
 import chefController from './controllers/chefController'
 import sequelize from './config/database';
 import { viewMenuItems } from './repositories/adminRepository';
+import RecommendationEventHandler from './eventHandlers/recommendation';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -16,6 +17,11 @@ const io = new Server(httpServer, {
 });
 
 io.on('connection', (socket) => {
+
+  const recommendationEventHandler = new RecommendationEventHandler(socket)
+
+  recommendationEventHandler.listen()
+
   console.log('A user connected');
 
   socket.on('message', (msg) => {
@@ -133,6 +139,8 @@ io.on('connection', (socket) => {
   socket.on('getRolloutItems', async () =>{
     let items = await chefController.viewRolloutItems()
 
+    console.log("Menu items:",items)
+
     socket.emit('getRolloutItemsSuccess', items)
   })
 
@@ -141,8 +149,8 @@ io.on('connection', (socket) => {
   });
 });
 
-sequelize.sync()
-    .then(() => {
+sequelize.sync({ alter: true })
+    .then( () => {
         console.log("Database connected");
     })
     .catch((error) => {
