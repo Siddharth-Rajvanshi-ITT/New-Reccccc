@@ -111,8 +111,8 @@ const rolloutItems = async () =>{
   
   socket.emit('getRecommendedItems')
   
-  // let rollout_item = await askQuestion("Enter id To add to rollout: ")
-  // socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
+  let rollout_item = await askQuestion("Enter id To add to rollout: ")
+  socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
 }
 
 
