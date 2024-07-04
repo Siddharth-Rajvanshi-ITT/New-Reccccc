@@ -63,6 +63,8 @@ const employeeFunction = async (user: any) => {
     const action = await askQuestion(`
       Choose an action:
       1. View Menu
+      2. View notification
+      3. Choose item for next day
       Enter action number: `);
 
     switch (action.trim()) {
@@ -70,12 +72,21 @@ const employeeFunction = async (user: any) => {
         console.log("entering view menu")
         await viewMenu();
         break;
+      case '2': 
+        socket.emit('getRolloutItems')
+
+      case '3': 
+        await chooseItem()
 
       default:
         console.log('Invalid option');
     }
   }
 };
+
+const chooseItem = ()=>{
+  
+}
 
 
 const chefFunction = async (user: any) => {
@@ -96,7 +107,13 @@ const chefFunction = async (user: any) => {
         await viewMenu();
         break;
       case '2':
-        await rolloutItems()
+        let category = await askQuestion(`
+          Enter category To add to rollout: 
+            1> Breakfast
+            2> lunch
+            3> dinner
+          `)
+        await rolloutItems(category)
         break;
       case '3':
         socket.emit('getRolloutItems')
@@ -107,12 +124,21 @@ const chefFunction = async (user: any) => {
   }
 };
 
-const rolloutItems = async () =>{
+const rolloutItems = async (category) =>{
   
   socket.emit('getRecommendedItems')
-  
+
+
+
   let rollout_item = await askQuestion("Enter id To add to rollout: ")
-  socket.emit('addRolloutItem', {rolloutItemId: rollout_item} )
+
+
+  socket.emit('createNotification', {category, rolloutItemId: rollout_item} )
+
+  socket.on('createNotificationSuccess', ()=>{
+    console.log('Notification sent')
+    socket.emit('addRolloutItem', {rolloutItemId:rollout_item})
+})
 }
 
 

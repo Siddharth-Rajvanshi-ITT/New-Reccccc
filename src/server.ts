@@ -8,6 +8,7 @@ import chefController from './controllers/chefController'
 import sequelize from './config/database';
 import { viewMenuItems } from './repositories/adminRepository';
 import RecommendationEventHandler from './eventHandlers/recommendation';
+import NotificationEventHandler from './eventHandlers/notification';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -19,8 +20,10 @@ const io = new Server(httpServer, {
 io.on('connection', (socket) => {
 
   const recommendationEventHandler = new RecommendationEventHandler(socket)
+  const notificationEventHandler = new NotificationEventHandler(socket)
 
   recommendationEventHandler.listen()
+  notificationEventHandler.listen()
 
   console.log('A user connected');
 
