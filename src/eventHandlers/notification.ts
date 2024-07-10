@@ -23,8 +23,10 @@ export default class NotificationEventHandler {
             await notificationSocketHandler.getNotificationById(this.socket, data);
         });
         this.socket.on("getNotificationByDate", async (data) => {
+            console.log(data)
             console.log("Date: ", data)
             await notificationSocketHandler.getNotificationByDate(this.socket, data);
+        
         });
         this.socket.on("updateNotification", async (data) => {
             await notificationSocketHandler.updateNotification(this.socket, data);

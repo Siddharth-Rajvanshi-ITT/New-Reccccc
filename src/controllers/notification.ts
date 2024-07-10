@@ -58,7 +58,7 @@ class NotificationController {
         const { date } = data;
         try {
             const notification = await this.notificationService.getNotificationByDate(date);
-            socket.emit('getNotificationByDateSuccess', notification);
+            socket.emit('getNotificationByDateSuccess', {notification});
         } catch (error:any) {
             socket.emit('getNotificationByDateError', { error: error.message });
         }

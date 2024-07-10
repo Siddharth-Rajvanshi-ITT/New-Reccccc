@@ -55,44 +55,92 @@ socket.on('disconnect', () => {
   console.log('Disconnected from server');
 });
 
+
 const employeeFunction = async (user: any) => {
   console.log(`Welcome ${user.name}!`);
 
-  // Loop to continue asking for admin actions until explicitly exiting
-  while (true) {
+  let exit = false;
+  while (!exit) {
     const action = await askQuestion(`
       Choose an action:
       1. View Menu
       2. View notification
       3. Choose item for next day
+      4. Exit
       Enter action number: `);
 
     switch (action.trim()) {
       case '1':
-        console.log("entering view menu")
+        console.log("Entering view menu");
         await viewMenu();
         break;
       case '2': 
-        socket.emit('getRolloutItems')
-
+        socket.emit('getRolloutItems');
+        break;
       case '3': 
-        await chooseItem()
-
+        await chooseItem(user);
+        break;
+      case '4':
+        console.log('Exiting Employee Panel');
+        exit = true;
+        break;
       default:
         console.log('Invalid option');
     }
   }
 };
 
-const chooseItem = ()=>{
+const chooseItem = async (user) => {
+  const date = new Date().toISOString().split('T')[0];
+
+  // Emit request to get notification data
+  socket.emit('getNotificationByDate', { date });
+
+  // Wait for the 'getNotificationByDateSuccess' event
+  const data = await new Promise((resolve) => {
+    socket.once('getNotificationByDateSuccess', (data) => {
+      resolve(data.notification);
+    });
+  }) as any;
+
+  const firstNotificationData = data[0].notification_data[0];
+
+  // Displaying the data using console.table
+  console.table(firstNotificationData);
   
-}
+
+
+
+  // console.log(data)
+
+  // console.table(data);
+
+  await getUserInput();
+};
+
+const getUserInput = async () => {
+  try {
+    const action = await askQuestion('Enter item ID: ');
+
+    socket.emit('createVoteItem', action);
+
+    // Wait for 'createVoteItemSuccess' event
+    await new Promise((resolve) => {
+      socket.once('createVoteItemSuccess', () => {
+        console.log('Vote item created successfully');
+        resolve(true);
+      });
+    });
+
+  } catch (error) {
+    console.error('Error getting user input:', error);
+    throw error;
+  }
+};
 
 
 const chefFunction = async (user: any) => {
   console.log(`Welcome chef ${user.name}!`);
-
-  // Loop to continue asking for admin actions until explicitly exiting
   while (true) {
     const action = await askQuestion(`
       Choose an action:
@@ -128,8 +176,6 @@ const rolloutItems = async (category) =>{
   
   socket.emit('getRecommendedItems')
 
-
-
   let rollout_item = await askQuestion("Enter id To add to rollout: ")
 
 
@@ -144,8 +190,6 @@ const rolloutItems = async (category) =>{
 
 const adminFunction = async (user: any) => {
   console.log(`Welcome Admin ${user.name}!`);
-
-  // Loop to continue asking for admin actions until explicitly exiting
   while (true) {
     const action = await askQuestion(`
       Choose an action:
@@ -178,7 +222,6 @@ const adminFunction = async (user: any) => {
   }
 };
 
-// Function to add a new menu
 const addMenu = async () => {
   const itemID = await askQuestion('Enter Menu ID: ');
   const itemName = await askQuestion('Enter Menu Name: ');
@@ -194,14 +237,12 @@ const addMenu = async () => {
 
 };
 
-// Function to delete an existing menu
 const deleteMenu = async () => {
   const menuId = await askQuestion('Enter Menu ID to delete: ');
 
   socket.emit('deleteMenuItem', { id: parseInt(menuId) });
 };
 
-// Function to update an existing menu
 const updateMenu = async () => {
   const menuId = await askQuestion('Enter Menu ID to update: ');
   const name = await askQuestion('Enter new name:)');

@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import VoteItemService from '../services/voteItem';
-import MenuItemService from 'src/services/menuItem';
+import MenuItemService from '../services/menuItem';
 
 class VoteItemController {
     private voteItemService: VoteItemService;
