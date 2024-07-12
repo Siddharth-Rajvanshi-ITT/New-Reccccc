@@ -10,7 +10,8 @@ class VoteItemController {
     }
 
     public createVoteItem = async (socket: Socket, data: any): Promise<void> => {
-        const { menu_id, category, date } = data;
+        const { menu_id, category } = data;
+        const date = new Date().toISOString().split('T')[0]
         try {
             const voteItem = await this.voteItemService.createVoteItem(menu_id, category, date);
             socket.emit('createVoteItemSuccess', voteItem);
@@ -81,8 +82,8 @@ class VoteItemController {
 
     public vote = async (socket: Socket, data: any): Promise<void> => {
         console.log('vote event', data)
-        const menu_id = data.menu_item.id;
-        const category = data.menu_item.category;
+        const menu_id = data.menu_id;
+        const category = data.category;
         const date = new Date().toISOString().split('T')[0];
 
         try {

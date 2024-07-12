@@ -9,6 +9,8 @@ import sequelize from './config/database';
 import { viewMenuItems } from './repositories/adminRepository';
 import RecommendationEventHandler from './eventHandlers/recommendation';
 import NotificationEventHandler from './eventHandlers/notification';
+import VoteItemEventHandler from './eventHandlers/voteItems';
+import DailyUserVoteEventHandler from './eventHandlers/dailyUserVote';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -21,9 +23,13 @@ io.on('connection', (socket) => {
 
   const recommendationEventHandler = new RecommendationEventHandler(socket)
   const notificationEventHandler = new NotificationEventHandler(socket)
+  const voteItemEventHandler = new VoteItemEventHandler(socket)
+  const dailyUserVoteSocketHandler = new DailyUserVoteEventHandler(socket)
 
   recommendationEventHandler.listen()
   notificationEventHandler.listen()
+  voteItemEventHandler.listen()
+  dailyUserVoteSocketHandler.listen()
 
   console.log('A user connected');
 
