@@ -93,6 +93,33 @@ class VoteItemController {
             socket.emit('voteError', { error: error.message });
         }
     };
+
+    public getVoteItemsByDate = async (socket: Socket, data): Promise<void> => {
+        const menuItemService = new MenuItemService();
+        const { category, date } = data;
+        try {
+            const voteItems = await this.voteItemService.getVoteItemsByDateAndCategory(date, category);
+
+            console.log('voteItems', voteItems)
+
+            const items = await Promise.all(voteItems.map(async (item) => {
+                const menuItem = await menuItemService.getMenuItemById(item.menu_id);
+                return {
+                    id: item.menu_id,
+                    name: menuItem.name,
+                    date: item.date,
+                    category: item.category,
+                    votes: item.votes,
+                }
+            }));
+
+            console.log('items', items)
+
+            socket.emit('getVoteItemsByDateSuccess', items);
+        } catch (error) {
+            socket.emit('getVoteItemsByDateError', { message: error.message });
+        }
+    };
 }
 
 export default VoteItemController;

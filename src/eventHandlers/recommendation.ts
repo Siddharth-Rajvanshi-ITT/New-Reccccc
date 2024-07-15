@@ -13,7 +13,8 @@ export default class RecommendationEventHandler {
     listen(){
         this.socket.on("getRecommendedItems", async (data) => {
             console.log('getRecommendationItems called------------------------------')
-            await recommendationSocketHandler.getRecommendedMenuItems(this.socket);
+            const { menu_type } = data
+            await recommendationSocketHandler.getRecommendedMenuItems(this.socket, menu_type);
         });
     }
 }

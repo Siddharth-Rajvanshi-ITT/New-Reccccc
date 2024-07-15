@@ -8,9 +8,9 @@ class RecommendationController {
         this.recommendationEngineService = new RecommendationEngineService();
     }
 
-    public async getRecommendedMenuItems(socket: Socket) {
+    public async getRecommendedMenuItems(socket: Socket, menu_type) {
         try {
-            const menuItems = await this.recommendationEngineService.getRecommendations();
+            const menuItems = await this.recommendationEngineService.getRecommendations(menu_type);
             console.log('----------got the items-----------')
             socket.emit('getRecommendedItemsSuccess', menuItems);
         } catch (error: any) {

@@ -27,8 +27,8 @@ export class RecommendationEngineService {
         return sentimentResult;
     }
 
-    private async getFeedbacksWithSentimentScore() {
-        const feedbacks = await this.feedbackService.getFeedbacksByMenuType();
+    private async getFeedbacksWithSentimentScore(menu_type) {
+        const feedbacks = await this.feedbackService.getFeedbacksByMenuType(menu_type);
         const feedbacksWithSentimentScore = []
 
         for (const feedback of feedbacks) {
@@ -47,10 +47,10 @@ export class RecommendationEngineService {
         return feedbacksWithSentimentScore;
     }
 
-    public async getRecommendations() {
+    public async getRecommendations(menu_type) {
         console.log('before getting sentiments')
 
-        const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore();
+        const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
 
         console.log('after getting sentiments')
 

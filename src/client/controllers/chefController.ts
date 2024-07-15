@@ -62,11 +62,16 @@ export class ChefController {
 
       if (!alreadyExists.create && !alreadyExists.modify) resolve(null);
 
+      console.log("getting topVotedItems")
+
       const topVotedItems = await this.getVoteItemsByDate(menu_type, vote_date) as any;
+
+      console.log("got topVotedItems", topVotedItems)
 
       if (!topVotedItems.length) {
         console.log("No one has voted yet, please wait!");
         resolve(null);
+        return
       }
 
       console.table(topVotedItems)
@@ -158,6 +163,7 @@ export class ChefController {
       this.socketController.emit('getDailyItemSubmissionByDate', { date });
 
       this.socketController.once('getDailyItemSubmissionByDateSuccess', (response) => {
+        console.log("getDailyItemSubmissionByDateSuccess", response )
         if (!response) {
           resolve({ create: true, modify: false });
         } else {
@@ -180,7 +186,9 @@ export class ChefController {
 
   private async rolloutItems(category: string) {
     
-    this.socketController.emit('getRecommendedItems');
+    this.socketController.emit('getRecommendedItems', { menu_type: category});
+
+
 
     let rollout_item = await askQuestion("Enter ID to add to rollout: ");
 
