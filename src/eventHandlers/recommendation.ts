@@ -5,16 +5,29 @@ const recommendationSocketHandler = new RecommendationSocketHandler();
 
 
 export default class RecommendationEventHandler {
-    socket
+    private socket
+
     constructor(socket: Socket) {
         this.socket = socket
     }
 
-    listen(){
+    listen() {
         this.socket.on("getRecommendedItems", async (data) => {
-            console.log('getRecommendationItems called------------------------------')
             const { menu_type } = data
             await recommendationSocketHandler.getRecommendedMenuItems(this.socket, menu_type);
         });
+
+        this.socket.on("getDiscardableItems", async (data) => {
+            console.log("Event getDiscardableItems", data)
+            const { menu_type } = data
+            await recommendationSocketHandler.getDiscardableMenuItems(this.socket, menu_type);
+        });
+
+        this.socket.on("discardItem", async (data) => {
+            console.log(data)
+            const { items: selectedItems } = data
+            await recommendationSocketHandler.discardMenuItems(this.socket, selectedItems);
+        });
     }
 }
+

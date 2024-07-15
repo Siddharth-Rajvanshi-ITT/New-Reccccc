@@ -40,7 +40,7 @@ export class SocketController {
     this.socket.once(event, listener);
   }
 
-  public off(event: string, listener: (...args: any[]) => void) {
+  public off(event: string, listener?: (...args: any[]) => void) {
     this.socket.off(event, listener);
   }
 }

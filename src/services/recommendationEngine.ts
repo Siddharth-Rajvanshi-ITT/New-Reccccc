@@ -1,18 +1,6 @@
-
 import FeedbackService from './feedback';
 import { SentimentAnalyzer } from "../utils/SentimentAnalyzer";
 import MenuItem from '../models/menuItem';
-
-interface FeedbackAttributes {
-    feedback_id: number;
-    item_id: number;
-    user_id: number;
-    rating: number;
-    comment: string;
-    feedback_date: Date;
-    sentiment_score: number;
-}
-
 export class RecommendationEngineService {
     private feedbackService: FeedbackService;
     private sentimentAnalyzer: SentimentAnalyzer;
@@ -47,13 +35,7 @@ export class RecommendationEngineService {
         return feedbacksWithSentimentScore;
     }
 
-    public async getRecommendations(menu_type) {
-        console.log('before getting sentiments')
-
-        const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
-
-        console.log('after getting sentiments')
-
+    private calculateMenuItemScores(feedbacksWithSentimentScore: any[]) {
         const menuItemScores: {
             [key: number]: {
                 totalRating: number;
@@ -76,7 +58,11 @@ export class RecommendationEngineService {
             menuItemScores[feedback.item_id].count += 1;
         });
 
-        const sortedMenuItems = Object.keys(menuItemScores)
+        return menuItemScores;
+    }
+
+    private sortMenuItemsByScore(menuItemScores: { [key: number]: { totalRating: number; totalSentiment: number; count: number; } }) {
+        return Object.keys(menuItemScores)
             .map((key: string) => {
                 const scoreData = menuItemScores[parseInt(key)];
                 const avgRating = scoreData.totalRating / scoreData.count;
@@ -91,14 +77,16 @@ export class RecommendationEngineService {
             })
             .sort((a, b) => b.avgSentimentScore - a.avgSentimentScore)
             .slice(0, 5);
+    }
 
+    private async getMenuItemDetails(sortedMenuItems: { itemId: number; avgRating: number; avgSentimentScore: number; weightedScore: number; }[]) {
         const menuItems = await MenuItem.findAll({
             where: {
                 item_id: sortedMenuItems.map(item => item.itemId)
             }
         });
 
-        const menuItemDetails = sortedMenuItems.map((sortedItem) => {
+        return sortedMenuItems.map((sortedItem) => {
             const menuItem = menuItems.find(item => item.item_id === sortedItem.itemId);
             if (!menuItem) {
                 throw new Error(`MenuItem with id ${sortedItem.itemId} not found`);
@@ -128,8 +116,64 @@ export class RecommendationEngineService {
                 recommendation
             };
         });
+    }
+
+    public async getRecommendations(menu_type: string) {
+        const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
+        const menuItemScores = this.calculateMenuItemScores(feedbacksWithSentimentScore);
+        const sortedMenuItems = this.sortMenuItemsByScore(menuItemScores);
+        const menuItemDetails = await this.getMenuItemDetails(sortedMenuItems);
 
         return menuItemDetails;
+    }
+
+    public async getDiscardableItems(menu_type: string) {
+        console.log('inside getDiscardableItems', menu_type)
+        const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
+
+        console.log('feedbacksWithSentimentScore', feedbacksWithSentimentScore)
+
+        const menuItemScores = this.calculateMenuItemScores(feedbacksWithSentimentScore);
+
+        console.log('menuItemScores', menuItemScores)
+
+        const discardableItems = Object.keys(menuItemScores)
+            .map((key: string) => {
+                const scoreData = menuItemScores[parseInt(key)];
+                const avgRating = scoreData.totalRating / scoreData.count;
+                const avgSentimentScore = scoreData.totalSentiment / scoreData.count;
+                return {
+                    itemId: parseInt(key),
+                    avgRating,
+                    avgSentimentScore
+                };
+            })
+            .filter(item => item.avgRating < 2).sort((a, b) => b.avgRating - a.avgRating);
+
+        console.log('discardableItems', discardableItems)
+
+        const menuItems = await MenuItem.findAll({
+            where: {
+                item_id: discardableItems.map(item => item.itemId)
+            }
+        });
+
+        return discardableItems.map((discardableItem) => {
+            const menuItem = menuItems.find(item => item.item_id === discardableItem.itemId);
+            if (!menuItem) {
+                throw new Error(`MenuItem with id ${discardableItem.itemId} not found`);
+            }
+
+            return {
+                id: menuItem.item_id,
+                name: menuItem.name,
+                category: menuItem.category,
+                price: menuItem.price,
+                availability_status: menuItem.availability_status,
+                avg_sentiment_score: discardableItem.avgSentimentScore,
+                avg_rating: discardableItem.avgRating
+            };
+        });
     }
 }
 

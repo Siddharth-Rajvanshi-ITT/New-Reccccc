@@ -3,7 +3,7 @@ import { Server } from 'socket.io';
 import { pool } from './config/db';
 import { RowDataPacket } from 'mysql2';
 import { getUser } from './controllers/userController';
-import { addMenu, deleteItem,updateItem, viewItem } from './controllers/adminController';
+import { addMenu, deleteItem, updateItem, viewItem } from './controllers/adminController';
 import chefController from './controllers/chefController'
 import sequelize from './config/database';
 import { viewMenuItems } from './repositories/adminRepository';
@@ -15,6 +15,10 @@ import DailyMenuItemEventHandler from './eventHandlers/dailyMenuItems';
 import DailyItemSubmissionEventHandler from './eventHandlers/dailyItemSubmission';
 import FeedbackEventHandler from './eventHandlers/feedback';
 import DailyUserFeedbackEventHandler from './eventHandlers/dailyUserFeedback';
+import DiscardRollOutEventHandler from "./eventHandlers/discardRollout";
+import DiscardFeedbackEventHandler from "./eventHandlers/discardFeedback";
+import EmployeePreferencesEventHandler from "./eventHandlers/employeePreferences";
+import MenuAttributesEventHandler from "./eventHandlers/menuAttributes";
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -33,6 +37,10 @@ io.on('connection', (socket) => {
   const dailyItemSubmissionEventHandler = new DailyItemSubmissionEventHandler(socket)
   const feedbackEventHandler = new FeedbackEventHandler(socket)
   const dailyUserFeedbackEventHandler = new DailyUserFeedbackEventHandler(socket)
+  const discadFeedbackEventHandler = new DiscardFeedbackEventHandler(socket);
+  const discardRollOutEventHandler = new DiscardRollOutEventHandler(socket);
+  const employeePreferencesEventHandler = new EmployeePreferencesEventHandler(socket);
+  const menuAttributesEventHandler = new MenuAttributesEventHandler(socket);
 
   recommendationEventHandler.listen()
   notificationEventHandler.listen()
@@ -42,6 +50,10 @@ io.on('connection', (socket) => {
   dailyItemSubmissionEventHandler.listen()
   feedbackEventHandler.listen()
   dailyUserFeedbackEventHandler.listen()
+  discadFeedbackEventHandler.listen()
+  discardRollOutEventHandler.listen()
+  employeePreferencesEventHandler.listen()
+  menuAttributesEventHandler.listen()
 
   console.log('A user connected');
 
@@ -91,7 +103,7 @@ io.on('connection', (socket) => {
 
   })
 
-  socket.on("addMenu", async ({ id, name, category, price, availability}) => {
+  socket.on("addMenu", async ({ id, name, category, price, availability }) => {
 
     console.log("Add menu");
     try {
@@ -112,9 +124,9 @@ io.on('connection', (socket) => {
 
   })
 
-  socket.on("deleteMenuItem", async ({ id}) => {
+  socket.on("deleteMenuItem", async ({ id }) => {
 
-    
+
     try {
       const menuItem = await deleteItem(id)
       if (menuItem) {
@@ -132,7 +144,7 @@ io.on('connection', (socket) => {
     }
 
   })
-  socket.on("updateMenu", async ({ id, name, category, price, availability}) => {
+  socket.on("updateMenu", async ({ id, name, category, price, availability }) => {
 
     console.log("Update menu");
     try {
@@ -153,14 +165,14 @@ io.on('connection', (socket) => {
 
   })
 
-  socket.on('addRolloutItem', async ({rolloutItemId}) =>{
-      await chefController.addToRolloutMenu(rolloutItemId)
+  socket.on('addRolloutItem', async ({ rolloutItemId }) => {
+    await chefController.addToRolloutMenu(rolloutItemId)
   })
 
-  socket.on('getRolloutItems', async () =>{
+  socket.on('getRolloutItems', async () => {
     let items = await chefController.viewRolloutItems()
 
-    console.log("Menu items:",items)
+    console.log("Menu items:", items)
 
     socket.emit('getRolloutItemsSuccess', items)
   })
@@ -171,12 +183,12 @@ io.on('connection', (socket) => {
 });
 
 sequelize.sync({ alter: true })
-    .then( () => {
-        console.log("Database connected");
-    })
-    .catch((error) => {
-        console.log(error);
-    });
+  .then(() => {
+    console.log("Database connected");
+  })
+  .catch((error) => {
+    console.log(error);
+  });
 httpServer.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });

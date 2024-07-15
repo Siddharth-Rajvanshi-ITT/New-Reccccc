@@ -19,7 +19,8 @@ export class EmployeeController {
         2. View notification
         3. Choose item for next day
         4. Give feedback
-        5. Exit
+        5. Give feedback to discard item
+        6. Exit
         Enter action number: `);
 
             switch (action.trim()) {
@@ -37,6 +38,9 @@ export class EmployeeController {
                     await this.giveFeedback(user);
                     break;
                 case '5':
+                    await this.discardItemFeedback(user);
+                    break;
+                case '6':
                     console.log('Exiting Employee Panel');
                     exit = true;
                     break;
@@ -44,6 +48,81 @@ export class EmployeeController {
                     console.log('Invalid option');
             }
         }
+    }
+
+    private async discardItemFeedback(user: any) {
+        const discardRollOutItem = await this.showDiscardMenuItem();
+        const isAlreadyProvidedFeedback = await this.getDiscardFeedbacksByCondition(discardRollOutItem.item_id, user.id);
+
+        if (isAlreadyProvidedFeedback) {
+            console.log(`You have already provided feedback for ${discardRollOutItem.item_name}`);
+            return;
+        }
+
+        const answers = await this.promptDiscardItemFeedback(discardRollOutItem);
+        await this.createDiscardFeedback(discardRollOutItem.item_id, user.id, answers.answers1, answers.answers2, answers.answers3);
+    }
+
+    public async createDiscardFeedback(item_id: number, user_id: number, answer1: string, answer2: string, answer3: string){
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('createDiscardFeedback', { item_id, user_id, answer1, answer2, answer3 });
+
+            this.socketController.on('createDiscardFeedbackSuccess', (data) => {
+                resolve(data);
+            });
+
+            this.socketController.on('createDiscardFeedbackError', (error: any) => {
+                reject(new Error(error.message || 'Failed to create discard feedback'));
+            });
+        });
+    }
+
+    private async promptDiscardItemFeedback(discardRollOutItem: any) {
+        const answers1 = await askQuestion(`Q1. What didn’t you like about ${discardRollOutItem.item_name}?\n>`)
+        const answers2 = await askQuestion(`Q2. How would you like ${discardRollOutItem.item_name} to taste?\n>`)
+        const answers3 = await askQuestion(`Q3. Share your mom’s recipe.\n>`)
+
+        return {
+            answers1, answers2,answers3
+        }
+    }
+
+    public async getDiscardFeedbacksByCondition(item_id: number, user_id: number) {
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('getDiscardFeedbacksByCondition', { item_id, user_id });
+
+            this.socketController.on('getDiscardFeedbacksByConditionSuccess', (data) => {
+                resolve(data);
+            });
+
+            this.socketController.on('getDiscardFeedbacksByConditionError', (error: any) => {
+                reject(new Error(error.message || 'Failed to fetch discard feedbacks by condition'));
+            });
+        });
+    }
+
+    
+
+    private async showDiscardMenuItem() {
+        const discardRollOutItem = await this.getDiscardRollOutByDate() as any;
+        console.log('--- This Month\'s Discard Roll Out Item ---', discardRollOutItem);
+        console.table([discardRollOutItem])
+
+        return discardRollOutItem;
+    }
+
+    public async getDiscardRollOutByDate(){
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('getDiscardRollOutByDate');
+
+            this.socketController.on('getDiscardRollOutByDateSuccess', (data) => {
+                resolve(data);
+            });
+
+            this.socketController.on('getDiscardRollOutByDateError', (error: any) => {
+                reject(new Error(error.message || 'Failed to fetch discard rollouts by date'));
+            });
+        });
     }
 
     async giveFeedback(user: any) {

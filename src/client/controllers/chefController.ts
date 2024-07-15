@@ -17,6 +17,8 @@ export class ChefController {
         2. Add rollout item
         3. View rollout item
         4. Submit daily menu 
+        5. View discardable items
+        6. View discard item feedback
         Enter action number: `);
 
       switch (action.trim()) {
@@ -44,10 +46,141 @@ export class ChefController {
               3> Dinner
             `))
           break;
+        case '5':
+          await this.viewDiscardableItems(await askQuestion(`
+            Enter category to add to submit menu: 
+              1> Breakfast
+              2> Lunch
+              3> Dinner
+            `))
+        case '6':
+          await this.viewDiscardItemFeedback();
+          break;
+          break;
         default:
           console.log('Invalid option');
       }
     }
+  }
+
+  private async viewDiscardItemFeedback() {
+    const discardItemFeedbacks = await this.getMonthlyDiscardFeedbacks();
+
+    console.log('Discard item feedbacks are:');
+    console.table(discardItemFeedbacks);
+  }
+
+  public async getMonthlyDiscardFeedbacks() {
+    return new Promise((resolve, reject) => {
+      this.socketController.emit('getMonthlyDiscardFeedbacks');
+
+      this.socketController.on('getMonthlyDiscardFeedbacksSuccess', (data) => {
+        resolve(data);
+      });
+
+      this.socketController.on('getMonthlyDiscardFeedbacksError', (error: any) => {
+        reject(new Error(error.message || 'Failed to fetch discard feedbacks'));
+      });
+    });
+  }
+
+  private async viewDiscardableItems(category) {
+    const menu_type = category === '1' ? 'breakfast' : category === '2' ? 'lunch' : 'dinner';
+
+    const choice = await this.promptDiscardChoice(menu_type);
+
+    if (choice === 'Exit') {
+      return;
+    }
+
+    const selectedItem = await this.promptDiscardItems(menu_type);
+
+    if (!selectedItem) {
+      console.log('No discardable items found');
+      return;
+    }
+
+    if (choice === 'Discard Item') {
+      console.log('Discarding items...', selectedItem);
+      this.socketController.emit('discardItem', { items: selectedItem });
+    } else if (choice === 'Ask employees for feedback') {
+      console.log("Asking employees for feedback")
+      this.socketController.emit('canCreateDiscardRollOut');
+      await this.discardRollout(selectedItem);
+    }
+
+  }
+
+  private async discardRollout(selectedItem: any) {
+    return new Promise<void>((resolve) => {
+      this.socketController.off('canCreateDiscardRollOutSuccess')
+
+      this.socketController.on('canCreateDiscardRollOutSuccess', async (canCreateDiscardRollOut) => {
+        if (canCreateDiscardRollOut) {
+          this.socketController.emit('createDiscardRollOut', { items: selectedItem });
+          console.log('Discard rollout created successfully');
+        } else {
+          console.log('Cannot create discard rollout as it has already been created for this month');
+        }
+        resolve();
+      })
+    })
+  }
+
+  private async promptDiscardItems(menu_type: string) {
+    console.log("Inside promptDiscardItems")
+    const menuItems: any = await this.getDiscardableItems(menu_type);
+    console.log(" after menuitems Inside promptDiscardItems", menuItems)
+
+
+    if (!menuItems.length) {
+      return null;
+    }
+
+    console.log('Discardable items for', menu_type, 'are:')
+    console.table(menuItems);
+
+    const selectedItems = await this.promptUserForSelection(menuItems);
+
+    return selectedItems;
+  }
+
+  private async promptUserForSelection(menuItems: any[]) {
+
+    const selectedItemId = await askQuestion(`Enter menu item ID:`)
+
+    return menuItems.filter((menuItem) => {
+      return +selectedItemId === menuItem.id
+    })[0];
+  }
+
+  private getDiscardableItems(menu_type: string) {
+    return new Promise((resolve, reject) => {
+      this.socketController.off('getDiscardableItemsSuccess')
+      this.socketController.off('getDiscardableItemsError')
+      this.socketController.emit('getDiscardableItems', { menu_type });
+
+      this.socketController.on('getDiscardableItemsSuccess', (data) => {
+        resolve(data);
+      });
+
+      this.socketController.on('getDiscardableItemsError', (error: any) => {
+        reject(new Error(error.message || 'Failed to fetch recommended menu items'));
+      });
+    });
+  }
+
+  private async promptDiscardChoice(menu_type: string): Promise<string> {
+    const choice = await askQuestion(`
+    1> Discard Item
+    2> Ask employees for feedback
+    3> Exit`)
+
+    const finalChoice = choice === '1' ? 'Discard Item' : choice === '2' ? 'Ask employees for feedback' : 'Exit';
+
+    console.log('final choice', finalChoice)
+
+    return finalChoice;
   }
 
   private async submitDailyMenu(category) {
@@ -163,7 +296,7 @@ export class ChefController {
       this.socketController.emit('getDailyItemSubmissionByDate', { date });
 
       this.socketController.once('getDailyItemSubmissionByDateSuccess', (response) => {
-        console.log("getDailyItemSubmissionByDateSuccess", response )
+        console.log("getDailyItemSubmissionByDateSuccess", response)
         if (!response) {
           resolve({ create: true, modify: false });
         } else {
@@ -185,8 +318,8 @@ export class ChefController {
   }
 
   private async rolloutItems(category: string) {
-    
-    this.socketController.emit('getRecommendedItems', { menu_type: category});
+
+    this.socketController.emit('getRecommendedItems', { menu_type: category });
 
 
 
