@@ -24,7 +24,7 @@ export default class RecommendationEventHandler {
         });
 
         this.socket.on("discardItem", async (data) => {
-            console.log(data)
+            console.log('Item to be discarded----------------------------',data)
             const { items: selectedItems } = data
             await recommendationSocketHandler.discardMenuItems(this.socket, selectedItems);
         });

@@ -53,9 +53,9 @@ export class ChefController {
               2> Lunch
               3> Dinner
             `))
+          break;
         case '6':
           await this.viewDiscardItemFeedback();
-          break;
           break;
         default:
           console.log('Invalid option');
@@ -85,7 +85,7 @@ export class ChefController {
   }
 
   private async viewDiscardableItems(category) {
-    const menu_type = category === '1' ? 'breakfast' : category === '2' ? 'lunch' : 'dinner';
+    const menu_type = category;
 
     const choice = await this.promptDiscardChoice(menu_type);
 
@@ -100,9 +100,12 @@ export class ChefController {
       return;
     }
 
+    console.log('-----------------Choice', choice)
+
     if (choice === 'Discard Item') {
       console.log('Discarding items...', selectedItem);
       this.socketController.emit('discardItem', { items: selectedItem });
+      console.log("Item discarded")
     } else if (choice === 'Ask employees for feedback') {
       console.log("Asking employees for feedback")
       this.socketController.emit('canCreateDiscardRollOut');
@@ -141,6 +144,8 @@ export class ChefController {
     console.table(menuItems);
 
     const selectedItems = await this.promptUserForSelection(menuItems);
+
+    console.log('--------------------Selected item:', selectedItems)
 
     return selectedItems;
   }
@@ -321,7 +326,9 @@ export class ChefController {
 
     this.socketController.emit('getRecommendedItems', { menu_type: category });
 
+    const recommendedItems = await this.getTopRecommendations(category);
 
+    console.table(recommendedItems)
 
     let rollout_item = await askQuestion("Enter ID to add to rollout: ");
 
@@ -330,6 +337,22 @@ export class ChefController {
     this.socketController.on('createNotificationSuccess', () => {
       console.log('Notification sent');
       this.socketController.emit('addRolloutItem', { rolloutItemId: rollout_item });
+    });
+  }
+
+  private getTopRecommendations(menu_type: string) {
+    return new Promise((resolve, reject) => {
+      this.socketController.off('getTopRecommendationsSuccess')
+      this.socketController.off('getTopRecommendationsError')
+      this.socketController.emit('getRecommendedItems', { menu_type });
+
+      this.socketController.on('getRecommendedItemsSuccess', (data) => {
+        resolve(data);
+      });
+
+      this.socketController.on('getRecommendedItemsError', (error: any) => {
+        reject(new Error(error.message || 'Failed to fetch recommended menu items'));
+      });
     });
   }
 

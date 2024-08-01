@@ -17,8 +17,7 @@ import FeedbackEventHandler from './eventHandlers/feedback';
 import DailyUserFeedbackEventHandler from './eventHandlers/dailyUserFeedback';
 import DiscardRollOutEventHandler from "./eventHandlers/discardRollout";
 import DiscardFeedbackEventHandler from "./eventHandlers/discardFeedback";
-import EmployeePreferencesEventHandler from "./eventHandlers/employeePreferences";
-import MenuAttributesEventHandler from "./eventHandlers/menuAttributes";
+import EmployeePreferencesEventHandler from './eventHandlers/employeePreferences';
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -39,8 +38,8 @@ io.on('connection', (socket) => {
   const dailyUserFeedbackEventHandler = new DailyUserFeedbackEventHandler(socket)
   const discadFeedbackEventHandler = new DiscardFeedbackEventHandler(socket);
   const discardRollOutEventHandler = new DiscardRollOutEventHandler(socket);
-  const employeePreferencesEventHandler = new EmployeePreferencesEventHandler(socket);
-  const menuAttributesEventHandler = new MenuAttributesEventHandler(socket);
+  const employeePreferencesEventHandler = new EmployeePreferencesEventHandler(socket)
+
 
   recommendationEventHandler.listen()
   notificationEventHandler.listen()
@@ -53,7 +52,6 @@ io.on('connection', (socket) => {
   discadFeedbackEventHandler.listen()
   discardRollOutEventHandler.listen()
   employeePreferencesEventHandler.listen()
-  menuAttributesEventHandler.listen()
 
   console.log('A user connected');
 

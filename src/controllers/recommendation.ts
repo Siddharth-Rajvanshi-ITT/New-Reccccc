@@ -32,7 +32,7 @@ class RecommendationController {
 
     public async discardMenuItems(socket: Socket, selectedItem) {
         try {
-            console.log(selectedItem.id)
+            console.log('Selected item id: -------------------',selectedItem.id)
             await this.menuItemsService.deleteMenuItem(selectedItem.id);
             socket.emit('discardItemSuccess');
         } catch (error) {

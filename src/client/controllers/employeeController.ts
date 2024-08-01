@@ -20,7 +20,8 @@ export class EmployeeController {
         3. Choose item for next day
         4. Give feedback
         5. Give feedback to discard item
-        6. Exit
+        6. Update profile
+        7. Exit
         Enter action number: `);
 
             switch (action.trim()) {
@@ -41,6 +42,9 @@ export class EmployeeController {
                     await this.discardItemFeedback(user);
                     break;
                 case '6':
+                    await this.updateProfile(user);
+                    break;
+                case '7':
                     console.log('Exiting Employee Panel');
                     exit = true;
                     break;
@@ -50,9 +54,74 @@ export class EmployeeController {
         }
     }
 
+    private async updateProfile(user) {
+        const preferences = await this.promptPreferences();
+        console.log('Preferences:------------------------', preferences)
+        
+        await this.updateEmployeePreference(user.id, preferences.mealType, preferences.spiceLevel, preferences.category, preferences.sweetTooth);
+    }
+
+    async updateEmployeePreference(userId: number, mealType: string, spiceLevel: string, category: string, sweetTooth: string) {
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('updateEmployeePreference', { userId, mealType, spiceLevel, category, sweetTooth });
+
+            this.socketController.on('updateEmployeePreferenceSuccess', (data) => {
+                resolve(data);
+            });
+
+            this.socketController.on('updateEmployeePreferenceError', (error) => {
+                reject(new Error(error.message || 'Failed to update employee preference'));
+            });
+        });
+    }
+
+    async promptPreferences() {
+        const preferences = {
+            mealType: '',
+            spiceLevel: '',
+            category: '',
+            sweetTooth: ''
+        };
+
+        preferences.mealType = await askQuestion(
+            'Please select meal type:\n1. System Default\n2. Vegetarian\n3. Non Vegetarian\n4. Eggetarian\nEnter your choice (1-4): '
+        );
+        preferences.mealType = this.mapChoiceToValue(preferences.mealType, ['system_default', 'vegetarian', 'non-vegetarian', 'eggetarian']);
+
+        preferences.spiceLevel = await askQuestion(
+            'Please select your spice level:\n1. System Default\n2. High\n3. Medium\n4. Low\nEnter your choice (1-4): '
+        );
+        preferences.spiceLevel = this.mapChoiceToValue(preferences.spiceLevel, ['system_default', 'high', 'medium', 'low']);
+
+        preferences.category = await askQuestion(
+            'What do you prefer most?\n1. System Default\n2. North Indian\n3. South Indian\n4. Other\nEnter your choice (1-4): '
+        );
+        preferences.category = this.mapChoiceToValue(preferences.category, ['system_default', 'north indian', 'south indian', 'other']);
+
+        preferences.sweetTooth = await askQuestion(
+            'Do you have a sweet tooth?\n1. System Default\n2. Yes\n3. No\nEnter your choice (1-3): '
+        );
+        preferences.sweetTooth = this.mapChoiceToValue(preferences.sweetTooth, [false, true, false]);
+
+        return preferences;
+    }
+
+    mapChoiceToValue(choice, values) {
+        const index = parseInt(choice, 10) - 1;
+        if (index >= 0 && index < values.length) {
+            return values[index];
+        }
+        return values[0]; // Default to the first option if the input is invalid
+    }
+
     private async discardItemFeedback(user: any) {
         const discardRollOutItem = await this.showDiscardMenuItem();
-        const isAlreadyProvidedFeedback = await this.getDiscardFeedbacksByCondition(discardRollOutItem.item_id, user.id);
+
+        if(!discardRollOutItem){
+            console.log('No discard items to provide feedback for.')
+            return
+        }
+        const isAlreadyProvidedFeedback = await this.getDiscardFeedbacksByCondition(discardRollOutItem?.item_id, user.id);
 
         if (isAlreadyProvidedFeedback) {
             console.log(`You have already provided feedback for ${discardRollOutItem.item_name}`);
@@ -234,7 +303,7 @@ export class EmployeeController {
     private async chooseItem(user: any) {
         const date = new Date().toISOString().split('T')[0];
 
-        this.socketController.emit('getNotificationByDate', { date });
+        this.socketController.emit('getNotificationByDate', { user });
 
         const data = await new Promise((resolve) => {
             this.socketController.once('getNotificationByDateSuccess', (data) => {
@@ -242,7 +311,9 @@ export class EmployeeController {
             });
         }) as any;
 
-        const firstNotificationData = data[0].notification_data[0];
+        const firstNotificationData = data;
+
+        console.log('data--------------------------', data)
 
         console.table(firstNotificationData);
 

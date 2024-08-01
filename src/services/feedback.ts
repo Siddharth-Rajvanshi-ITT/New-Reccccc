@@ -51,11 +51,12 @@ class FeedbackService {
     }
 
     async getFeedbacksByMenuType(menu_type: string) {
+        const category= menu_type  == '1' ? 'Breakfast' : menu_type == '2' ? 'Lunch' : 'Dinner';
         try {
             const feedbacks = await Feedback.findAll({
                 include: [{
                     model: MenuItem,
-                    where: { category: menu_type },
+                    where: { category: category },
                     required: true
                 }]
             });

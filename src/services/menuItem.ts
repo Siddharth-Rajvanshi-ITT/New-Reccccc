@@ -92,11 +92,17 @@ class MenuItemService {
 
     async deleteMenuItem(item_id: number) {
         try {
+            console.log('deleting menu item----------------')
             const menuItem = await MenuItem.findByPk(item_id);
+            console.log('found menu item to be deleted----------------', menuItem)
+
             if (!menuItem) {
                 throw new Error("Menu item not found");
             }
+            console.log('--------------------Destroying')
             await menuItem.destroy();
+            console.log('--------------------Destroyed')
+
         } catch (error:any) {
             throw new Error(error.message);
         }

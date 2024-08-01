@@ -1,6 +1,7 @@
 import FeedbackService from './feedback';
 import { SentimentAnalyzer } from "../utils/SentimentAnalyzer";
 import MenuItem from '../models/menuItem';
+
 export class RecommendationEngineService {
     private feedbackService: FeedbackService;
     private sentimentAnalyzer: SentimentAnalyzer;
@@ -17,6 +18,8 @@ export class RecommendationEngineService {
 
     private async getFeedbacksWithSentimentScore(menu_type) {
         const feedbacks = await this.feedbackService.getFeedbacksByMenuType(menu_type);
+
+        console.log("Got feedbacks-----", feedbacks)
         const feedbacksWithSentimentScore = []
 
         for (const feedback of feedbacks) {
@@ -36,13 +39,7 @@ export class RecommendationEngineService {
     }
 
     private calculateMenuItemScores(feedbacksWithSentimentScore: any[]) {
-        const menuItemScores: {
-            [key: number]: {
-                totalRating: number;
-                totalSentiment: number;
-                count: number;
-            };
-        } = {};
+        const menuItemScores = {};
 
         feedbacksWithSentimentScore.forEach((feedback) => {
             if (!menuItemScores[feedback.item_id]) {
@@ -52,7 +49,7 @@ export class RecommendationEngineService {
                     count: 0,
                 };
             }
-
+            
             menuItemScores[feedback.item_id].totalRating += feedback.rating;
             menuItemScores[feedback.item_id].totalSentiment += feedback.sentiment.score;
             menuItemScores[feedback.item_id].count += 1;
@@ -61,7 +58,7 @@ export class RecommendationEngineService {
         return menuItemScores;
     }
 
-    private sortMenuItemsByScore(menuItemScores: { [key: number]: { totalRating: number; totalSentiment: number; count: number; } }) {
+    private sortMenuItemsByScore(menuItemScores) {
         return Object.keys(menuItemScores)
             .map((key: string) => {
                 const scoreData = menuItemScores[parseInt(key)];
@@ -118,7 +115,7 @@ export class RecommendationEngineService {
         });
     }
 
-    public async getRecommendations(menu_type: string) {
+    public async getRecommendations(menu_type: string) {   
         const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
         const menuItemScores = this.calculateMenuItemScores(feedbacksWithSentimentScore);
         const sortedMenuItems = this.sortMenuItemsByScore(menuItemScores);
@@ -128,14 +125,8 @@ export class RecommendationEngineService {
     }
 
     public async getDiscardableItems(menu_type: string) {
-        console.log('inside getDiscardableItems', menu_type)
         const feedbacksWithSentimentScore = await this.getFeedbacksWithSentimentScore(menu_type);
-
-        console.log('feedbacksWithSentimentScore', feedbacksWithSentimentScore)
-
         const menuItemScores = this.calculateMenuItemScores(feedbacksWithSentimentScore);
-
-        console.log('menuItemScores', menuItemScores)
 
         const discardableItems = Object.keys(menuItemScores)
             .map((key: string) => {
@@ -148,9 +139,10 @@ export class RecommendationEngineService {
                     avgSentimentScore
                 };
             })
-            .filter(item => item.avgRating < 2).sort((a, b) => b.avgRating - a.avgRating);
-
-        console.log('discardableItems', discardableItems)
+            .filter((item) => {
+                return item.avgRating < 2
+            })
+            .sort((a, b) => b.avgRating - a.avgRating);
 
         const menuItems = await MenuItem.findAll({
             where: {

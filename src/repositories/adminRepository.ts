@@ -32,8 +32,13 @@ export const updatedItemData = async (id: number, name: string, category: string
     if (!menuItem) {
       return null;
     }
-
+    
     menuItem.name=name
+    menuItem.category=category
+    menuItem.price=price
+    menuItem.availability_status=availability
+    const updatedMenuItem= await menuItem.save()
+    return menuItem
 
   } catch (error: any) {
     throw new Error(error.message);
