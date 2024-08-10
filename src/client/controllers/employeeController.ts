@@ -1,11 +1,12 @@
-import { askQuestion } from '../utils/inputUtils';
+import { EmployeeService } from '../services/EmployeeService';
 import { SocketController } from './socketController';
+import { askQuestion } from '../utils/inputUtils';
 
 export class EmployeeController {
-    private socketController: SocketController;
+    private employeeService: EmployeeService;
 
     constructor(socketController: SocketController) {
-        this.socketController = socketController;
+        this.employeeService = new EmployeeService(socketController);
     }
 
     public async handleUser(user: any) {
@@ -14,35 +15,35 @@ export class EmployeeController {
         let exit = false;
         while (!exit) {
             const action = await askQuestion(`
-        Choose an action:
-        1. View Menu
-        2. View notification
-        3. Choose item for next day
-        4. Give feedback
-        5. Give feedback to discard item
-        6. Update profile
-        7. Exit
-        Enter action number: `);
+            Choose an action:
+            1. View Menu
+            2. View notification
+            3. Choose item for next day
+            4. Give feedback
+            5. Give feedback to discard item
+            6. Update profile
+            7. Exit
+            Enter action number: `);
 
             switch (action.trim()) {
                 case '1':
                     console.log("Entering view menu");
-                    await this.viewMenu();
+                    await this.employeeService.viewMenu();
                     break;
                 case '2':
-                    this.socketController.emit('getRolloutItems');
+                    this.employeeService.viewNotification();
                     break;
                 case '3':
-                    await this.chooseItem(user);
+                    await this.employeeService.chooseItem(user);
                     break;
                 case '4':
-                    await this.giveFeedback(user);
+                    await this.employeeService.giveFeedback(user);
                     break;
                 case '5':
-                    await this.discardItemFeedback(user);
+                    await this.employeeService.discardItemFeedback(user);
                     break;
                 case '6':
-                    await this.updateProfile(user);
+                    await this.employeeService.updateProfile(user);
                     break;
                 case '7':
                     console.log('Exiting Employee Panel');
@@ -52,329 +53,5 @@ export class EmployeeController {
                     console.log('Invalid option');
             }
         }
-    }
-
-    private async updateProfile(user) {
-        const preferences = await this.promptPreferences();
-        console.log('Preferences:------------------------', preferences)
-        
-        await this.updateEmployeePreference(user.id, preferences.mealType, preferences.spiceLevel, preferences.category, preferences.sweetTooth);
-    }
-
-    async updateEmployeePreference(userId: number, mealType: string, spiceLevel: string, category: string, sweetTooth: string) {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('updateEmployeePreference', { userId, mealType, spiceLevel, category, sweetTooth });
-
-            this.socketController.on('updateEmployeePreferenceSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('updateEmployeePreferenceError', (error) => {
-                reject(new Error(error.message || 'Failed to update employee preference'));
-            });
-        });
-    }
-
-    async promptPreferences() {
-        const preferences = {
-            mealType: '',
-            spiceLevel: '',
-            category: '',
-            sweetTooth: ''
-        };
-
-        preferences.mealType = await askQuestion(
-            'Please select meal type:\n1. System Default\n2. Vegetarian\n3. Non Vegetarian\n4. Eggetarian\nEnter your choice (1-4): '
-        );
-        preferences.mealType = this.mapChoiceToValue(preferences.mealType, ['system_default', 'vegetarian', 'non-vegetarian', 'eggetarian']);
-
-        preferences.spiceLevel = await askQuestion(
-            'Please select your spice level:\n1. System Default\n2. High\n3. Medium\n4. Low\nEnter your choice (1-4): '
-        );
-        preferences.spiceLevel = this.mapChoiceToValue(preferences.spiceLevel, ['system_default', 'high', 'medium', 'low']);
-
-        preferences.category = await askQuestion(
-            'What do you prefer most?\n1. System Default\n2. North Indian\n3. South Indian\n4. Other\nEnter your choice (1-4): '
-        );
-        preferences.category = this.mapChoiceToValue(preferences.category, ['system_default', 'north indian', 'south indian', 'other']);
-
-        preferences.sweetTooth = await askQuestion(
-            'Do you have a sweet tooth?\n1. System Default\n2. Yes\n3. No\nEnter your choice (1-3): '
-        );
-        preferences.sweetTooth = this.mapChoiceToValue(preferences.sweetTooth, [false, true, false]);
-
-        return preferences;
-    }
-
-    mapChoiceToValue(choice, values) {
-        const index = parseInt(choice, 10) - 1;
-        if (index >= 0 && index < values.length) {
-            return values[index];
-        }
-        return values[0]; // Default to the first option if the input is invalid
-    }
-
-    private async discardItemFeedback(user: any) {
-        const discardRollOutItem = await this.showDiscardMenuItem();
-
-        if(!discardRollOutItem){
-            console.log('No discard items to provide feedback for.')
-            return
-        }
-        const isAlreadyProvidedFeedback = await this.getDiscardFeedbacksByCondition(discardRollOutItem?.item_id, user.id);
-
-        if (isAlreadyProvidedFeedback) {
-            console.log(`You have already provided feedback for ${discardRollOutItem.item_name}`);
-            return;
-        }
-
-        const answers = await this.promptDiscardItemFeedback(discardRollOutItem);
-        await this.createDiscardFeedback(discardRollOutItem.item_id, user.id, answers.answers1, answers.answers2, answers.answers3);
-    }
-
-    public async createDiscardFeedback(item_id: number, user_id: number, answer1: string, answer2: string, answer3: string){
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('createDiscardFeedback', { item_id, user_id, answer1, answer2, answer3 });
-
-            this.socketController.on('createDiscardFeedbackSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('createDiscardFeedbackError', (error: any) => {
-                reject(new Error(error.message || 'Failed to create discard feedback'));
-            });
-        });
-    }
-
-    private async promptDiscardItemFeedback(discardRollOutItem: any) {
-        const answers1 = await askQuestion(`Q1. What didn’t you like about ${discardRollOutItem.item_name}?\n>`)
-        const answers2 = await askQuestion(`Q2. How would you like ${discardRollOutItem.item_name} to taste?\n>`)
-        const answers3 = await askQuestion(`Q3. Share your mom’s recipe.\n>`)
-
-        return {
-            answers1, answers2,answers3
-        }
-    }
-
-    public async getDiscardFeedbacksByCondition(item_id: number, user_id: number) {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('getDiscardFeedbacksByCondition', { item_id, user_id });
-
-            this.socketController.on('getDiscardFeedbacksByConditionSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('getDiscardFeedbacksByConditionError', (error: any) => {
-                reject(new Error(error.message || 'Failed to fetch discard feedbacks by condition'));
-            });
-        });
-    }
-
-    
-
-    private async showDiscardMenuItem() {
-        const discardRollOutItem = await this.getDiscardRollOutByDate() as any;
-        console.log('--- This Month\'s Discard Roll Out Item ---', discardRollOutItem);
-        console.table([discardRollOutItem])
-
-        return discardRollOutItem;
-    }
-
-    public async getDiscardRollOutByDate(){
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('getDiscardRollOutByDate');
-
-            this.socketController.on('getDiscardRollOutByDateSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('getDiscardRollOutByDateError', (error: any) => {
-                reject(new Error(error.message || 'Failed to fetch discard rollouts by date'));
-            });
-        });
-    }
-
-    async giveFeedback(user: any) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const currentDate = new Date().toISOString().split('T')[0];
-                const dailyMenuItems = await this.getDailyMenuItemByDate(currentDate) as any;
-
-                if (dailyMenuItems.length === 0) {
-                    console.log('No menu items found for today');
-                    resolve(null);
-                }
-
-                console.log('--- Daily Menu Items ---', dailyMenuItems);
-
-                console.table(dailyMenuItems)
-
-                const item_id = await this.promptUserForFeedbackItems();
-
-                const selectedItem = dailyMenuItems.filter((item: any) => item.id == item_id)[0];
-
-                console.log('selectedItem:', selectedItem.category)
-
-                const isAlreadyProvidedFeedback = await this.isAlreadyProvidedFeedback(selectedItem.category, user);
-
-                if (isAlreadyProvidedFeedback) {
-                    console.log(`You have already voted for ${selectedItem.name}`);
-                    resolve(null);
-                }
-
-                const employeeFeedback = await this.promptFeedback();
-
-                console.log('selectedItem:', selectedItem)
-
-
-                const feedback = {
-                    item_id: parseInt(selectedItem.id),
-                    user_id: parseInt(user.id),
-                    rating: +employeeFeedback.rating,
-                    comment: employeeFeedback.comment,
-                    feedback_date: new Date().toISOString().split('T')[0],
-                };
-
-                await this.createFeedback(feedback.item_id, feedback.user_id, feedback.rating, feedback.comment, feedback.feedback_date, selectedItem.category);
-                console.log('Feedback submitted successfully');
-                resolve(true);
-            } catch (error: any) {
-                console.error('Error submitting feedback:', error.message);
-                reject(error);
-            }
-        })
-    }
-
-    public async createFeedback(item_id: number, user_id: number, rating: number, comment: string, feedback_date: string, category: string) {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('createFeedback', { item_id, user_id, rating, comment, feedback_date, category });
-
-            this.socketController.on('createFeedbackSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('createFeedbackError', (error: any) => {
-                reject(new Error(error.message || 'Failed to create feedback'));
-            });
-        });
-    }
-
-    private async promptFeedback(): Promise<{ rating: number, comment: string }> {
-        const rating = await askQuestion('Enter rating (1-5): ');
-        const comment = await askQuestion('Enter comment: ');
-
-        return { rating: +rating, comment };
-    }
-
-    private async isAlreadyProvidedFeedback(category: string, user: any): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('getUserFeedbacksByCondition', { category, user });
-
-            this.socketController.on('getUserFeedbacksByConditionSuccess', (data: boolean) => {
-                resolve(data);
-            });
-
-            this.socketController.on('getUserFeedbacksByConditionError', (error: any) => {
-                reject(new Error(error.message || 'Failed to check if already voted'));
-            });
-        });
-    }
-
-    private async promptUserForFeedbackItems() {
-        const selectedItem = await askQuestion('Enter item ID: ');
-        return selectedItem;
-    }
-
-    private async getDailyMenuItemByDate(date: string) {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('getDailyMenuItemByDate', { date });
-
-            this.socketController.on('getDailyMenuItemByDateSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('getDailyMenuItemByDateError', (error: any) => {
-                reject(new Error(error.message || 'Failed to fetch daily menu item'));
-            });
-        });
-    }
-
-
-    private async chooseItem(user: any) {
-        const date = new Date().toISOString().split('T')[0];
-
-        this.socketController.emit('getNotificationByDate', { user });
-
-        const data = await new Promise((resolve) => {
-            this.socketController.once('getNotificationByDateSuccess', (data) => {
-                resolve(data.notification);
-            });
-        }) as any;
-
-        const firstNotificationData = data;
-
-        console.log('data--------------------------', data)
-
-        console.table(firstNotificationData);
-
-        await this.getUserInput(firstNotificationData, user);
-    }
-
-    private async getUserInput(firstNotificationData, user) {
-        try {
-            return new Promise(async (resolve) => {
-                const action = await askQuestion('Enter item ID: ');
-
-                const selectedItem = firstNotificationData.filter((item: any) => item.item_id == action)[0];
-                const category = selectedItem.category;
-
-                const isAlreadyProvidedFeedback = await this.isAlreadyVoted(selectedItem.category, user);
-
-                if (isAlreadyProvidedFeedback) {
-                    console.log(`You have already voted for ${selectedItem.category}`);
-                    return;
-                }
-
-                await this.vote(category, user, selectedItem.item_id)
-
-                console.log('Voted successfully');
-                resolve(true)
-            });
-        } catch (error) {
-            console.error('Error getting user input:', error);
-            throw error;
-        }
-    }
-
-    public async vote(category, user, menu_id) {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('createUserVote', { category, user, menu_id });
-
-            this.socketController.on('createUserVoteSuccess', (data) => {
-                resolve(data);
-            });
-
-            this.socketController.on('createUserVoteError', (error: any) => {
-                reject(new Error(error.message || 'Failed to vote'));
-            });
-        });
-    }
-
-    public async isAlreadyVoted(category: string, user: any): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            this.socketController.emit('getUserVotesByCondition', { category, user });
-
-            this.socketController.on('getUserVotesByConditionSuccess', (data: boolean) => {
-                resolve(data);
-            });
-
-            this.socketController.on('getUserVotesByConditionError', (error: any) => {
-                reject(new Error(error.message || 'Failed to check if already voted'));
-            });
-        });
-    }
-
-    private async viewMenu() {
-        this.socketController.emit("viewMenu");
     }
 }

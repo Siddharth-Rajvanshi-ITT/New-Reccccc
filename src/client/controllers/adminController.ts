@@ -1,11 +1,12 @@
-import { askQuestion } from '../utils/inputUtils';
+import { AdminService } from '../services/AdminService';
 import { SocketController } from './socketController';
+import { askQuestion } from '../utils/inputUtils';
 
 export class AdminController {
-  private socketController: SocketController;
+  private adminService: AdminService;
 
   constructor(socketController: SocketController) {
-    this.socketController = socketController;
+    this.adminService = new AdminService(socketController);
   }
 
   public async handleUser(user: any) {
@@ -22,16 +23,16 @@ export class AdminController {
 
       switch (action.trim()) {
         case '1':
-          await this.addMenu();
+          await this.adminService.addMenu();
           break;
         case '2':
-          await this.deleteMenu();
+          await this.adminService.deleteMenu();
           break;
         case '3':
-          await this.updateMenu();
+          await this.adminService.updateMenu();
           break;
         case '4':
-          await this.viewMenu();
+          await this.adminService.viewMenu();
           return;
         case '5':
           console.log('Exiting Admin Panel');
@@ -40,39 +41,5 @@ export class AdminController {
           console.log('Invalid option');
       }
     }
-  }
-
-  private async addMenu() {
-    const itemID = await askQuestion('Enter Menu ID: ');
-    const itemName = await askQuestion('Enter Menu Name: ');
-    const itemCategory = await askQuestion('Enter Menu Category: ');
-    const itemPrice = await askQuestion('Enter Menu Price: ');
-    const itemAvailability = await askQuestion('Enter Menu Availability Status: ');
-
-    console.log("Item:", { id: itemID, name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability });
-
-    this.socketController.emit('addMenu', { id: itemID, name: itemName, category: itemCategory, price: itemPrice, availability: itemAvailability });
-
-    console.log("Item added after emit");
-  }
-
-  private async deleteMenu() {
-    const menuId = await askQuestion('Enter Menu ID to delete: ');
-
-    this.socketController.emit('deleteMenuItem', { id: parseInt(menuId) });
-  }
-
-  private async updateMenu() {
-    const menuId = await askQuestion('Enter Menu ID to update: ');
-    const name = await askQuestion('Enter new name: ');
-    const category = await askQuestion('Enter new category: ');
-    const price = await askQuestion('Enter new price: ');
-    const availability = await askQuestion('Enter new availability: ');
-
-    this.socketController.emit('updateMenu', { id: parseInt(menuId), name, category, price, availability });
-  }
-
-  private async viewMenu() {
-    this.socketController.emit("viewMenu");
   }
 }
