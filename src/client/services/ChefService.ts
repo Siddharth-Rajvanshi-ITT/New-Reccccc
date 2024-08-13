@@ -4,25 +4,33 @@ import { askQuestion } from '../utils/inputUtils';
 
 export class ChefService {
   private chefRepository: ChefRepository;
+  private socketController: SocketController;
 
   constructor(socketController: SocketController) {
+    this.socketController = socketController;
     this.chefRepository = new ChefRepository(socketController);
   }
 
   public async viewMenu() {
     this.chefRepository.viewMenu();
+
+    await new Promise((resolve) => {
+      this.socketController.on("menuItemSuccess", (menuItem) => {
+        console.table(menuItem);
+        resolve(menuItem)
+      });
+    })
   }
 
   public async rolloutItems(category: string) {
-    const recommendedItems = await this.chefRepository.getTopRecommendations(category);
-    console.table(recommendedItems);
+    await this.chefRepository.getTopRecommendations(category);
 
     const rolloutItemId = await askQuestion("Enter ID to add to rollout: ");
     this.chefRepository.addRolloutItem(category, rolloutItemId);
   }
 
   public async getRolloutItems() {
-    this.chefRepository.getRolloutItems();
+    await this.chefRepository.getRolloutItems();
   }
 
   public async submitDailyMenu(category: string) {
@@ -98,7 +106,7 @@ export class ChefService {
       1> Discard Item
       2> Ask employees for feedback
       3> Exit`);
-      
+
     return choice === '1' ? 'Discard Item' : choice === '2' ? 'Ask employees for feedback' : 'Exit';
   }
 }

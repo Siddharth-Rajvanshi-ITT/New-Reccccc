@@ -90,7 +90,7 @@ export class EmployeeService {
             const currentDate = new Date().toISOString().split('T')[0];
             const dailyMenuItems = await this.employeeRepository.getDailyMenuItemByDate(currentDate) as any;
 
-            if (dailyMenuItems.length === 0) {
+            if (!dailyMenuItems || dailyMenuItems?.length === 0) {
                 console.log('No menu items found for today');
                 return null;
             }
@@ -183,9 +183,24 @@ export class EmployeeService {
 
     public async viewMenu() {
         this.socketController.emit("viewMenu");
+
+        await new Promise((resolve) => {
+            this.socketController.on("menuItemSuccess", (menuItem) => {
+                console.table(menuItem);
+                resolve(menuItem)
+            });
+        })
     }
 
-    public viewNotification() {
-        this.socketController.emit('getRolloutItems');
+    public async viewNotification(user) {
+        this.socketController.emit('getNotificationByDate', { user });
+
+        const data = await new Promise((resolve) => {
+            this.socketController.on('getNotificationByDateSuccess', (data) => {
+                resolve(data.notification);
+            });
+        }) as any;
+
+        console.table(data);
     }
 }

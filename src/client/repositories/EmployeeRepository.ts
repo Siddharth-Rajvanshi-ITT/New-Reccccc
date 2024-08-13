@@ -60,16 +60,30 @@ export class EmployeeRepository {
     }
 
     public async isAlreadyVoted(category: string, user: any): Promise<boolean> {
-        this.socketController.emit('isAlreadyVoted', { category, user });
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('getUserVotesByCondition', { category, user });
 
-        return new Promise((resolve) => {
-            this.socketController.once('isAlreadyVotedSuccess', (data) => {
-                resolve(data.isAlreadyVoted);
+            this.socketController.on('getUserVotesByConditionSuccess', (data: boolean) => {
+                resolve(data);
+            });
+
+            this.socketController.on('getUserVotesByConditionError', (error: any) => {
+                reject(new Error(error.message || 'Failed to check if already voted'));
             });
         });
     }
 
-    public async vote(category: string, user: any, item_id: string) {
-        this.socketController.emit('vote', { category, user, item_id });
+    public async vote(category: string, user: any, menu_id: string) {
+        return new Promise((resolve, reject) => {
+            this.socketController.emit('createUserVote', { category, menu_id, user });
+
+            this.socketController.on('createUserVoteSuccess', (data) => {
+                resolve(data);
+            });
+
+            this.socketController.on('createUserVoteError', (error: any) => {
+                reject(new Error(error.message || 'Failed to vote'));
+            });
+        });
     }
 }

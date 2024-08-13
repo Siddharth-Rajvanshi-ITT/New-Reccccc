@@ -11,8 +11,15 @@ export class ChefRepository {
     this.socketController.emit("viewMenu");
   }
 
-  public getRolloutItems() {
+  public async getRolloutItems() {
     this.socketController.emit('getRolloutItems');
+
+    await new Promise((resolve) => {
+      this.socketController.on("getRolloutItemsSuccess", (menuItem) => {
+        console.table(menuItem);
+        resolve(menuItem)
+      });
+    })
   }
 
   public async getTopRecommendations(menu_type: string) {
